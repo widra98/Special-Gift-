@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f1016">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <title>Für uns · Richards App</title>
+  <link rel="stylesheet" href="./styles.css">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon-192.png">
+  <script type="module" src="./app.js"></script>
+</head>
+<body>
+  <header>
+    <a href="#menu" class="app-title">Für uns <span aria-hidden="true">✨</span></a>
+    <div class="header-right"><span class="points-badge" id="pointsBadge" hidden>⭐ <span id="userPoints">0</span> Pkt.</span><button id="logout" class="text-btn" hidden>Abmelden</button></div>
+  </header>
+  <main>
+    <noscript>Bitte JavaScript aktivieren, um das Quiz zu nutzen.</noscript>
+    <p id="globalStatus" class="status" role="status" hidden></p>
+    <section id="setup" class="panel" hidden>
+      <span class="eyebrow">Für Kira & Richard</span>
+      <h1>Hier entsteht eure App.</h1>
+      <p>Die gemeinsame Anmeldung ist noch nicht eingerichtet. Die Schritte stehen in der Datei START-HIER.md im Codepaket.</p>
+    </section>
+    <section id="loginView" class="panel" hidden>
+      <span class="eyebrow">Ein kleines Stück wir</span>
+      <h1>Schön, dass du da bist.</h1>
+      <p>Melde dich an, um deine Fragen und deinen Punktestand zu sehen.</p>
+      <form id="loginForm">
+        <label for="email">E-Mail-Adresse</label><input id="email" name="email" type="email" autocomplete="username" required>
+        <label for="password">Passwort</label><input id="password" name="password" type="password" autocomplete="current-password" required>
+        <button class="primary" id="loginButton" type="submit">Anmelden</button>
+        <p id="loginStatus" class="status" role="status"></p>
+      </form>
+    </section>
+    <div id="authenticated" hidden>
+      <section id="view-menu" class="view" hidden>
+        <span class="eyebrow">Nur für uns</span><h1 id="greeting">Hallo!</h1>
+        <p class="intro">Kleine Überraschungen. Neue Fragen. Unsere Momente.</p>
+        <div class="menu-grid">
+          <a class="menu-card notes-card" href="#notes"><span class="menu-icon" aria-hidden="true">💌</span><span><strong>Unsere täglichen Notizen</strong><span>Ein Gedanke, ein Bild, ein kleiner Gruß.</span></span><span class="arrow" aria-hidden="true">›</span></a>
+          <a class="menu-card" href="#quiz"><span class="menu-icon" aria-hidden="true">❓</span><span><strong>Beziehungs-Quiz</strong><span id="quizSummary">Deine neuen Fragen warten hier.</span></span><span class="arrow" aria-hidden="true">›</span></a>
+          <a class="menu-card" href="#create"><span class="menu-icon" aria-hidden="true">✍️</span><span><strong id="createTitle">Eine Frage erstellen</strong><span>Vier Antworten. Eine richtige Lösung.</span></span><span class="arrow" aria-hidden="true">›</span></a>
+          <a class="menu-card" href="#wishes"><span class="menu-icon" aria-hidden="true">🎬</span><span><strong>Glückwünsche</strong><span>Ein ganz persönliches Video für dich</span></span><span class="arrow" aria-hidden="true">›</span></a>
+          <a class="menu-card" href="#mystery"><span class="menu-icon" aria-hidden="true">🎁</span><span><strong>Monats-Geschenk</strong><span>Schnitzeljagd & Überraschungen</span></span><span class="arrow" aria-hidden="true">›</span></a>
+          <a class="menu-card" href="#gallery"><span class="menu-icon" aria-hidden="true">📸</span><span><strong>Unsere Erinnerungen</strong><span>Fotoalben & schöne Momente</span></span><span class="arrow" aria-hidden="true">›</span></a>
+          <a class="menu-card" href="#rewards"><span class="menu-icon" aria-hidden="true">🎟️</span><span><strong>Prämien-Shop</strong><span>Richards Punkte werden zu kleinen Freuden.</span></span><span class="arrow" aria-hidden="true">›</span></a>
+        </div>
+      </section>
+      <section id="view-notes" class="view" hidden>
+        <a class="btn-back" href="#menu">‹ Zurück zum Menü</a><h1>Ein kleiner Gruß für dich.</h1>
+        <p class="intro">Was möchtest du heute teilen? Schreib eine Nachricht, schick ein Bild oder kombiniere beides.</p>
+        <form id="noteForm" class="panel">
+          <fieldset id="noteFields">
+            <label for="noteText">Deine Nachricht</label><textarea id="noteText" maxlength="2000" rows="4" placeholder="Heute musste ich an dich denken, als …"></textarea>
+            <label for="noteImage">Ein Bild hinzufügen <span class="muted">(optional)</span></label><input id="noteImage" type="file" accept="image/jpeg,image/png,image/webp">
+            <p class="field-hint">JPG, PNG oder WebP, bis 20 MB. Große Bilder werden vor dem Senden verkleinert.</p>
+            <img id="notePreview" class="note-image" alt="Vorschau deines Bildes" hidden>
+            <button id="removeNoteImage" class="text-btn" type="button" hidden>Bild entfernen</button>
+          </fieldset>
+          <button id="sendNote" class="primary" type="submit">Notiz senden</button><p id="noteStatus" class="status" role="status"></p>
+        </form>
+        <div class="timeline-heading"><h2>Unser Verlauf</h2><button id="refreshNotes" class="text-btn">Neue Notizen laden</button></div>
+        <p id="notesLoadStatus" class="status" role="status"></p><div id="notesTimeline" class="list"></div>
+        <button id="olderNotes" class="secondary" hidden>Ältere Notizen laden</button>
+      </section>
+      <section id="view-quiz" class="view" hidden>
+        <a class="btn-back" href="#menu">‹ Zurück zum Menü</a><h1>Wie gut kennst du mich?</h1>
+        <p class="intro">Eine Frage, ein Versuch. Richtig: 50 Punkte. Falsch: 0 Punkte. Danach ist die Frage erledigt.</p>
+        <div id="quizBox" class="panel"></div>
+        <details><summary>Meine beantworteten Fragen</summary><div id="history" class="list"></div></details>
+      </section>
+      <section id="view-create" class="view" hidden>
+        <a class="btn-back" href="#menu">‹ Zurück zum Menü</a><h1 id="composeHeading">Deine Frage</h1>
+        <p class="intro">Was sollte dein Gegenüber über dich wissen?</p>
+        <form id="questionForm" class="panel">
+          <fieldset id="questionFields">
+            <label for="questionText">Deine Frage</label><textarea id="questionText" minlength="5" maxlength="500" rows="3" required placeholder="Zum Beispiel: Welchen Ort möchte ich unbedingt mit dir besuchen?"></textarea>
+            <p class="field-hint">Trage vier unterschiedliche Antworten ein und markiere die richtige.</p>
+            <div class="option-row"><input type="radio" name="correct" value="0" aria-label="Antwort A ist richtig" required><label for="option0">A</label><input id="option0" maxlength="160" required placeholder="Antwort A"></div>
+            <div class="option-row"><input type="radio" name="correct" value="1" aria-label="Antwort B ist richtig"><label for="option1">B</label><input id="option1" maxlength="160" required placeholder="Antwort B"></div>
+            <div class="option-row"><input type="radio" name="correct" value="2" aria-label="Antwort C ist richtig"><label for="option2">C</label><input id="option2" maxlength="160" required placeholder="Antwort C"></div>
+            <div class="option-row"><input type="radio" name="correct" value="3" aria-label="Antwort D ist richtig"><label for="option3">D</label><input id="option3" maxlength="160" required placeholder="Antwort D"></div>
+            <label for="explanation">Erklärung zur Lösung <span class="muted">(optional)</span></label><textarea id="explanation" maxlength="500" rows="2" placeholder="Wird erst nach dem Beantworten gezeigt."></textarea>
+          </fieldset>
+          <p class="field-hint">Prüfe die richtige Lösung vor dem Senden. Die Frage erscheint direkt im anderen Quiz und kann danach nicht mehr verändert werden.</p>
+          <button class="primary" id="sendQuestion" type="submit">Frage senden</button>
+          <p id="composeStatus" class="status" role="status"></p>
+        </form>
+        <details><summary>Meine gesendeten Fragen</summary><div id="createdQuestions" class="list"></div></details>
+      </section>
+      <section id="view-wishes" class="view" hidden>
+        <a class="btn-back" href="#menu">‹ Zurück zum Menü</a><h1>Alles Liebe! 🎉</h1>
+        <div class="panel empty"><span class="big-icon" aria-hidden="true">🎬</span><h2>Ein Video nur für dich.</h2><p>Hier ist Platz für eure persönlichen Glückwünsche. Das Video folgt noch.</p></div>
+      </section>
+      <section id="view-mystery" class="view" hidden>
+        <a class="btn-back" href="#menu">‹ Zurück zum Menü</a><h1>Monats-Geschenk 🎁</h1>
+        <div class="panel empty"><span class="big-icon" aria-hidden="true">🧩</span><h2>Eine Überraschung wartet.</h2><p>Die Schnitzeljagden und ihre Freischalttermine werden noch ergänzt.</p></div>
+      </section>
+      <section id="view-gallery" class="view" hidden>
+        <a class="btn-back" href="#menu">‹ Zurück zum Menü</a><h1>Unsere Momente 📸</h1>
+        <div class="panel empty"><span class="big-icon" aria-hidden="true">📷</span><h2>Platz für Erinnerungen.</h2><p>Eure Fotoalben folgen noch.</p></div>
+      </section>
+      <section id="view-rewards" class="view" hidden>
+        <a class="btn-back" href="#menu">‹ Zurück zum Menü</a><h1>Prämien-Shop 🎟️</h1>
+        <p id="shopIntro" class="intro"></p><div id="shop"></div>
+        <h2>Richards eingelöste Gutscheine</h2><div id="coupons" class="list"></div>
+      </section>
+    </div>
+  </main>
+  <footer>Für Kira & Richard <span aria-hidden="true">♡</span></footer>
+</body>
+</html>
