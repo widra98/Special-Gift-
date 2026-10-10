@@ -23,7 +23,7 @@ export function validateNote(text, hasImage) {
   if (clean.length > 2000) throw new Error('Die Nachricht darf höchstens 2000 Zeichen haben.');
   return clean;
 }
-async function prepareImage(file) {
+export async function prepareImage(file) {
   if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) throw new Error('Bitte ein JPG-, PNG- oder WebP-Bild auswählen.');
   if (file.size > 20 * 1024 * 1024) throw new Error('Bitte ein Bild mit höchstens 20 MB auswählen.');
   let bitmap;

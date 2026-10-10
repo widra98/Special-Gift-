@@ -1,10 +1,12 @@
+import { Features } from './features.js?v=20261006';
 import { config } from './config.js';
-import { QuizApi } from './api.js';
-import { AnswerSubmission, validateQuestion } from './quiz-state.js';
-import { NotesPanel } from './notes.js';
+import { QuizApi } from './api.js?v=20261006';
+import { AnswerSubmission, validateQuestion } from './quiz-state.js?v=20261006';
+import { NotesPanel } from './notes.js?v=20261006';
 
 const api = new QuizApi(config);
 const notes = new NotesPanel(api, config.supabaseUrl);
+const features = new Features(api, config.supabaseUrl, () => refresh().catch(displayError));
 const $ = id => document.getElementById(id);
 const el = (tag, className, text) => {
   const node = document.createElement(tag);
@@ -12,12 +14,8 @@ const el = (tag, className, text) => {
   if (text !== undefined) node.textContent = text;
   return node;
 };
-const views = ['menu', 'quiz', 'create', 'notes', 'wishes', 'mystery', 'gallery', 'rewards'];
-const rewards = [
-  { code: 'essen', title: 'Lieblingsessen kochen 🍝', cost: 50 },
-  { code: 'kino', title: 'Kino- & Popcornabend 🍿', cost: 100 },
-  { code: 'joker', title: 'Wunsch-Joker 🌟', cost: 200 },
-];
+const views = ['menu', 'quiz', 'create', 'notes', 'wishes', 'mystery', 'gallery', 'rewards', 'match'];
+let rewards = [];
 let state = null;
 let answer = null;
 let shownQuestion = null;
@@ -45,7 +43,7 @@ function showRoute(scroll = false) {
   if (scroll) window.scrollTo(0, 0);
 }
 function showLogin() {
-  notes.reset();
+  notes.reset(); features.reset();
   state = null; answer = null; shownQuestion = null; draft = null; pendingReward = null; restoredFor = null;
   creating = false; redeeming = false;
   $('authenticated').hidden = true;
@@ -87,7 +85,8 @@ async function refresh({ resetQuiz = false } = {}) {
   refreshing = (async () => {
     const nextState = await api.snapshot();
     if (ticket !== epoch) return;
-    state = nextState;
+    if (nextState.version !== 2) throw new Error('Die Datenbank-Erweiterung fehlt noch. Bitte zuerst 01-update.sql und 02-fragen.sql aus der Update-Anleitung ausführen.');
+    state = nextState; rewards = state.rewards; features.attach(state.me);
     notes.attach(state.me);
     $('loginView').hidden = true;
     $('authenticated').hidden = false;
@@ -104,6 +103,7 @@ async function refresh({ resetQuiz = false } = {}) {
     renderShop();
     showRoute();
     if (currentView() === 'notes') void notes.load();
+    features.route(currentView());
   })();
   try { await refreshing; } finally { refreshing = null; }
 }
@@ -116,8 +116,8 @@ function renderQuiz(reset = false) {
   answer = null;
   if (!shownQuestion) {
     box.classList.add('empty');
-    box.append(el('span', 'big-icon', '✨'), el('h2', '', 'Alle aktuellen Fragen sind erledigt.'),
-      el('p', '', 'Sobald neue Fragen für dich da sind, geht es hier weiter.'));
+    box.append(el('span', 'big-icon', '✨'), el('h2', '', state.daily_used >= 5 ? 'Deine fünf Fragen für heute sind erledigt.' : 'Alle aktuellen Fragen sind erledigt.'),
+      el('p', '', state.daily_used >= 5 ? 'Ab Mitternacht deutscher Zeit kannst du fünf weitere Fragen beantworten.' : 'Sobald dein Gegenüber neue Fragen erstellt, geht es hier weiter.'));
     const check = el('button', 'secondary', 'Nach neuen Fragen schauen');
     check.onclick = () => refresh({ resetQuiz: true }).catch(displayError);
     box.append(check);
@@ -127,7 +127,7 @@ function renderQuiz(reset = false) {
   answer = new AnswerSubmission(shownQuestion.id, (id, index) => api.answerQuestion(id, index));
   const question = shownQuestion;
   const submission = answer;
-  box.append(el('p', 'counter', `${state.pending} offene ${state.pending === 1 ? 'Frage' : 'Fragen'} · ${state.answered} erledigt`));
+  box.append(el('p', 'counter', `Heute ${state.daily_used}/5 beantwortet · ${state.pending} offen · ${state.answered} insgesamt erledigt`));
   const form = el('form');
   const fields = el('fieldset');
   fields.append(el('legend', '', question.question));
@@ -157,7 +157,7 @@ function renderQuiz(reset = false) {
       labels[result.correct_index].classList.add('correct');
       if (!result.is_correct) labels[result.selected_index].classList.add('wrong');
       const resultBox = el('div', 'result');
-      resultBox.append(el('strong', '', result.is_correct ? 'Richtig! 50 Punkte.' : 'Leider falsch. Die Frage ist erledigt.'),
+      resultBox.append(el('strong', '', result.is_correct ? 'Richtig! 1 Punkt.' : 'Leider falsch. Die Frage ist erledigt.'),
         el('p', '', `Richtige Antwort: ${question.options[result.correct_index]}`));
       if (result.explanation) resultBox.append(el('p', '', result.explanation));
       const next = el('button', 'secondary', 'Weiter');
@@ -181,7 +181,7 @@ function renderLists() {
   if (!state.history.length) history.append(el('p', '', 'Du hast noch keine Frage beantwortet.'));
   for (const item of state.history) {
     const card = el('article', 'list-item');
-    card.append(el('span', 'tag', `${item.is_correct ? 'Richtig · +50 Punkte' : 'Falsch · 0 Punkte'} · ${dateLabel(item.answered_at)}`),
+    card.append(el('span', 'tag', `${item.is_correct ? 'Richtig · +1 Punkt' : 'Falsch · 0 Punkte'} · ${dateLabel(item.answered_at)}`),
       el('strong', '', item.question), el('p', '', `Deine Antwort: ${item.selected}`), el('p', '', `Lösung: ${item.correct}`));
     if (item.explanation) card.append(el('p', '', item.explanation)); history.append(card);
   }
@@ -195,14 +195,12 @@ function renderLists() {
   if (!state.coupons.length) coupons.append(el('p', '', 'Noch keine Gutscheine eingelöst.'));
   for (const item of state.coupons) {
     const card = el('article', 'list-item');
-    card.append(el('strong', '', item.title), el('p', '', `${item.cost} Punkte · ${dateLabel(item.created_at)}`)); coupons.append(card);
+    card.append(el('strong', '', item.title), el('p', '', `${item.owner}: ${item.cost} Punkte · ${dateLabel(item.created_at)}${item.legacy_cost ? ` · Vor dem Update: ${item.legacy_cost} alte Punkte` : ''}`)); coupons.append(card);
   }
 }
 function renderShop() {
   const shop = $('shop'); shop.replaceChildren();
-  const richard = state.me.person === 'richard';
-  $('shopIntro').textContent = richard ? 'Löse deine Punkte ein. Deine Gutscheine werden hier für euch beide gespeichert.' : 'Hier siehst du Richards eingelöste Gutscheine. Deine eigenen Quizpunkte zählen separat.';
-  if (!richard) return;
+  $('shopIntro').textContent = 'Löse deine Punkte ein. Dein Gegenüber übernimmt die Planung. Eure Gutscheine bleiben hier sichtbar.';
   for (const reward of rewards) {
     const row = el('article', 'shop-item'); const info = el('div');
     info.append(el('strong', '', reward.title), el('p', '', `${reward.cost} Punkte`));

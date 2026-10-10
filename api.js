@@ -102,25 +102,26 @@ export class QuizApi {
   redeem(id, code) { return this.rpc('rq_redeem', { p_id: id, p_reward_code: code }); }
   createNote(payload) { return this.rpc('rq_create_note', payload); }
   listNotes(before = null) { return this.rpc('rq_list_notes', { p_before_time: before?.created_at ?? null, p_before_id: before?.id ?? null }); }
-  async imageRequest(path, { blob, retry = true } = {}) {
+  async imageRequest(path, { blob, retry = true, bucket = 'rq-notes' } = {}) {
+    if (!['rq-notes', 'rq-albums', 'rq-mystery'].includes(bucket)) throw new ApiError('Ungültiger Bildspeicher.');
     if (!/^[0-9a-f-]{36}\/[0-9a-f-]{36}\.jpg$/.test(path)) throw new ApiError('Ungültiger Bildpfad.');
     await this.refreshSession();
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 45000);
     try {
-      const endpoint = blob ? '/storage/v1/object/rq-notes/' : '/storage/v1/object/authenticated/rq-notes/';
+      const endpoint = blob ? `/storage/v1/object/${bucket}/` : `/storage/v1/object/authenticated/${bucket}/`;
       const response = await this.fetch(this.url + endpoint + path, {
         method: blob ? 'POST' : 'GET', signal: controller.signal, credentials: 'omit',
         headers: { apikey: this.key, Authorization: `Bearer ${this.session.access_token}`,
           ...(blob ? { 'Content-Type': 'image/jpeg', 'x-upsert': 'false', 'Cache-Control': 'private, max-age=0' } : {}) },
         ...(blob ? { body: blob } : {}),
       });
-      if (response.status === 401 && retry) { await this.refreshSession(true); return this.imageRequest(path, { blob, retry: false }); }
+      if (response.status === 401 && retry) { await this.refreshSession(true); return this.imageRequest(path, { blob, retry: false, bucket }); }
       if (!response.ok) {
         const error = await response.json().catch(() => ({}));
         if (blob && (response.status === 409 || error.error === 'Duplicate' || String(error.statusCode) === '409')) {
           // Eine verlorene Upload-Bestätigung darf dieselbe Datei nicht doppelt anlegen.
-          const existing = await this.downloadImage(path);
+          const existing = await this.downloadImage(path, bucket);
           const [left, right] = await Promise.all([blob.arrayBuffer(), existing.arrayBuffer()]);
           const a = new Uint8Array(left), b = new Uint8Array(right);
           if (a.length === b.length && a.every((value, index) => value === b[index])) return;
@@ -134,6 +135,17 @@ export class QuizApi {
       throw new ApiError('Die Bildübertragung wurde unterbrochen. Bitte versuche es erneut.');
     } finally { clearTimeout(timer); }
   }
-  uploadImage(path, blob) { return this.imageRequest(path, { blob }); }
-  downloadImage(path) { return this.imageRequest(path); }
+  uploadImage(path, blob, bucket = 'rq-notes') { return this.imageRequest(path, { blob, bucket }); }
+  downloadImage(path, bucket = 'rq-notes') { return this.imageRequest(path, { bucket }); }
+  features(action, data = {}) { return this.rpc('rq_features', { p_action: action, p_data: data }); }
+  async removeAlbumImage(path) {
+    if (!/^[0-9a-f-]{36}\/[0-9a-f-]{36}\.jpg$/.test(path)) throw new ApiError('Ungültiger Bildpfad.');
+    await this.refreshSession();
+    const response = await this.fetch(this.url + '/storage/v1/object/rq-albums', {
+      method: 'DELETE', credentials: 'omit', signal: AbortSignal.timeout(15000),
+      headers: { apikey: this.key, Authorization: `Bearer ${this.session.access_token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prefixes: [path] }),
+    });
+    if (!response.ok) throw new ApiError('Das Foto ist aus dem Album entfernt. Die Speicherdatei konnte noch nicht gelöscht werden.', response.status);
+  }
 }

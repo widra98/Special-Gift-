@@ -9,11 +9,11 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <title>Für uns · Richards App</title>
-  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./styles.css?v=20261006">
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="./icons/icon-192.png">
-  <script type="module" src="./app.js"></script>
+  <script type="module" src="./app.js?v=20261006"></script>
 </head>
 <body>
   <header>
@@ -46,11 +46,12 @@
         <div class="menu-grid">
           <a class="menu-card notes-card" href="#notes"><span class="menu-icon" aria-hidden="true">💌</span><span><strong>Unsere täglichen Notizen</strong><span>Ein Gedanke, ein Bild, ein kleiner Gruß.</span></span><span class="arrow" aria-hidden="true">›</span></a>
           <a class="menu-card" href="#quiz"><span class="menu-icon" aria-hidden="true">❓</span><span><strong>Beziehungs-Quiz</strong><span id="quizSummary">Deine neuen Fragen warten hier.</span></span><span class="arrow" aria-hidden="true">›</span></a>
+          <a class="menu-card" href="#match"><span class="menu-icon" aria-hidden="true">💞</span><span><strong>Sind wir uns einig?</strong><span>Gleiche Fragen. Erst antworten, dann vergleichen.</span></span><span class="arrow" aria-hidden="true">›</span></a>
           <a class="menu-card" href="#create"><span class="menu-icon" aria-hidden="true">✍️</span><span><strong id="createTitle">Eine Frage erstellen</strong><span>Vier Antworten. Eine richtige Lösung.</span></span><span class="arrow" aria-hidden="true">›</span></a>
           <a class="menu-card" href="#wishes"><span class="menu-icon" aria-hidden="true">🎬</span><span><strong>Glückwünsche</strong><span>Ein ganz persönliches Video für dich</span></span><span class="arrow" aria-hidden="true">›</span></a>
-          <a class="menu-card" href="#mystery"><span class="menu-icon" aria-hidden="true">🎁</span><span><strong>Monats-Geschenk</strong><span>Schnitzeljagd & Überraschungen</span></span><span class="arrow" aria-hidden="true">›</span></a>
+          <a class="menu-card" href="#mystery"><span class="menu-icon" aria-hidden="true">🎁</span><span><strong>Mystery Surprise</strong><span>Eine Schnitzeljagd. Ein großes Geschenk.</span></span><span class="arrow" aria-hidden="true">›</span></a>
           <a class="menu-card" href="#gallery"><span class="menu-icon" aria-hidden="true">📸</span><span><strong>Unsere Erinnerungen</strong><span>Fotoalben & schöne Momente</span></span><span class="arrow" aria-hidden="true">›</span></a>
-          <a class="menu-card" href="#rewards"><span class="menu-icon" aria-hidden="true">🎟️</span><span><strong>Prämien-Shop</strong><span>Richards Punkte werden zu kleinen Freuden.</span></span><span class="arrow" aria-hidden="true">›</span></a>
+          <a class="menu-card" href="#rewards"><span class="menu-icon" aria-hidden="true">🎟️</span><span><strong>Prämien-Shop</strong><span>Eure Punkte werden zu gemeinsamen Erlebnissen.</span></span><span class="arrow" aria-hidden="true">›</span></a>
         </div>
       </section>
       <section id="view-notes" class="view" hidden>
@@ -72,9 +73,12 @@
       </section>
       <section id="view-quiz" class="view" hidden>
         <a class="btn-back" href="#menu">‹ Zurück zum Menü</a><h1>Wie gut kennst du mich?</h1>
-        <p class="intro">Eine Frage, ein Versuch. Richtig: 50 Punkte. Falsch: 0 Punkte. Danach ist die Frage erledigt.</p>
+        <p class="intro">Eine Frage, ein Versuch. Richtig: 1 Punkt. Falsch: 0 Punkte. Danach ist die Frage erledigt. Bis zu fünf Fragen pro Tag, Tageswechsel um Mitternacht deutscher Zeit.</p>
         <div id="quizBox" class="panel"></div>
         <details><summary>Meine beantworteten Fragen</summary><div id="history" class="list"></div></details>
+      </section>
+      <section id="view-match" class="view" hidden>
+        <a class="btn-back" href="#menu">‹ Zurück zum Menü</a><h1>Sind wir uns einig?</h1><p class="intro">Bis zu fünf Fragen täglich. Eure Antworten bleiben verborgen, bis beide geantwortet haben. Gleiche Antwort: je 1 Punkt. Tageswechsel um Mitternacht deutscher Zeit.</p><div id="matchPanel"></div>
       </section>
       <section id="view-create" class="view" hidden>
         <a class="btn-back" href="#menu">‹ Zurück zum Menü</a><h1 id="composeHeading">Deine Frage</h1>
@@ -100,17 +104,17 @@
         <div class="panel empty"><span class="big-icon" aria-hidden="true">🎬</span><h2>Ein Video nur für dich.</h2><p>Hier ist Platz für eure persönlichen Glückwünsche. Das Video folgt noch.</p></div>
       </section>
       <section id="view-mystery" class="view" hidden>
-        <a class="btn-back" href="#menu">‹ Zurück zum Menü</a><h1>Monats-Geschenk 🎁</h1>
-        <div class="panel empty"><span class="big-icon" aria-hidden="true">🧩</span><h2>Eine Überraschung wartet.</h2><p>Die Schnitzeljagden und ihre Freischalttermine werden noch ergänzt.</p></div>
+        <a class="btn-back" href="#menu">‹ Zurück zum Menü</a><h1>Mystery Surprise 🎁</h1>
+        <div id="mysteryPanel"></div>
       </section>
       <section id="view-gallery" class="view" hidden>
         <a class="btn-back" href="#menu">‹ Zurück zum Menü</a><h1>Unsere Momente 📸</h1>
-        <div class="panel empty"><span class="big-icon" aria-hidden="true">📷</span><h2>Platz für Erinnerungen.</h2><p>Eure Fotoalben folgen noch.</p></div>
+        <p class="intro">Eure gemeinsamen Alben. Ihr könnt beide Fotos hinzufügen.</p><div id="galleryPanel"></div>
       </section>
       <section id="view-rewards" class="view" hidden>
         <a class="btn-back" href="#menu">‹ Zurück zum Menü</a><h1>Prämien-Shop 🎟️</h1>
         <p id="shopIntro" class="intro"></p><div id="shop"></div>
-        <h2>Richards eingelöste Gutscheine</h2><div id="coupons" class="list"></div>
+        <h2>Eure eingelösten Gutscheine</h2><div id="coupons" class="list"></div>
       </section>
     </div>
   </main>
