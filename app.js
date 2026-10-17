@@ -5,8 +5,9 @@ import { config } from './config.js';
 import { QuizApi } from './api.js?v=20261006';
 import { AnswerSubmission, validateQuestion } from './quiz-state.js?v=20261006';
 import { NotesPanel } from './notes.js?v=20261006';
-
-const api = new QuizApi(config);
+import { BirthdayVideos } from './birthday-videos.js?v=20261017-v3';
+const api = new QuizApi(config);new BirthdayVideos(api);
+//const notes = new NotesPanel(api, config.supabaseUrl);
 const notes = new NotesPanel(api, config.supabaseUrl);
 const features = new Features(api, config.supabaseUrl, () => refresh().catch(displayError));
 const moods = new MoodsPanel(api, config.supabaseUrl, displayError);
