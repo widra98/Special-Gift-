@@ -1,4 +1,5 @@
-import { Features } from './features.js?v=20261006';
+import { Features } from './features.js?v=20261016';
+import { MoodsPanel } from './moods.js?v=20261016-moods';
 import { config } from './config.js';
 import { QuizApi } from './api.js?v=20261006';
 import { AnswerSubmission, validateQuestion } from './quiz-state.js?v=20261006';
@@ -7,6 +8,7 @@ import { NotesPanel } from './notes.js?v=20261006';
 const api = new QuizApi(config);
 const notes = new NotesPanel(api, config.supabaseUrl);
 const features = new Features(api, config.supabaseUrl, () => refresh().catch(displayError));
+const moods = new MoodsPanel(api, config.supabaseUrl, displayError);
 const $ = id => document.getElementById(id);
 const el = (tag, className, text) => {
   const node = document.createElement(tag);
@@ -14,7 +16,7 @@ const el = (tag, className, text) => {
   if (text !== undefined) node.textContent = text;
   return node;
 };
-const views = ['menu', 'quiz', 'create', 'notes', 'wishes', 'mystery', 'gallery', 'rewards', 'match'];
+const views = ['menu', 'quiz', 'create', 'notes', 'wishes', 'mystery', 'gallery', 'rewards', 'match', 'moods'];
 let rewards = [];
 let state = null;
 let answer = null;
@@ -40,10 +42,11 @@ function dateLabel(value) { return new Date(value).toLocaleDateString('de-DE', {
 function currentView() { const name = location.hash.slice(1); return views.includes(name) ? name : 'menu'; }
 function showRoute(scroll = false) {
   for (const name of views) $(`view-${name}`).hidden = name !== currentView();
+  if(state)moods.route(currentView());
   if (scroll) window.scrollTo(0, 0);
 }
 function showLogin() {
-  notes.reset(); features.reset();
+  notes.reset(); features.reset(); moods.reset();
   state = null; answer = null; shownQuestion = null; draft = null; pendingReward = null; restoredFor = null;
   creating = false; redeeming = false;
   $('authenticated').hidden = true;
@@ -88,6 +91,7 @@ async function refresh({ resetQuiz = false } = {}) {
     if (nextState.version !== 2) throw new Error('Die Datenbank-Erweiterung fehlt noch. Bitte zuerst 01-update.sql und 02-fragen.sql aus der Update-Anleitung ausführen.');
     state = nextState; rewards = state.rewards; features.attach(state.me);
     notes.attach(state.me);
+    moods.attach(state.me, state.partner);
     $('loginView').hidden = true;
     $('authenticated').hidden = false;
     $('pointsBadge').hidden = false;

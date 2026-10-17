@@ -263,10 +263,32 @@ class Match extends Panel {
 }
 
 class Mystery extends Panel {
-  async load() { const state = await this.call('hunt_get'); this.frame(); if (state.admin) this.admin(state); else this.play(state); }
+  constructor(...args) {
+    super(...args);
+    this.wake = () => {
+      if (this.active && this.waiting && !document.hidden) void this.run(null, () => this.load());
+    };
+    document.addEventListener('visibilitychange', this.wake);
+    window.addEventListener('online', this.wake);
+  }
+  activate() { this.active = true; }
+  deactivate() { this.active = false; clearInterval(this.timer); }
+  reset() {
+    super.reset(); this.active = false; this.waiting = false;
+    this.root.classList.remove('mystery-waiting');
+  }
+  async load() {
+    const state = await this.call('hunt_get');
+    if (!this.active) return;
+    this.frame();
+    this.waiting = !state.admin && (state.locked || (!state.step && !state.finished));
+    this.root.classList.toggle('mystery-waiting', this.waiting);
+    if (state.admin) this.admin(state); else this.play(state);
+  }
   admin(state) {
     this.root.append(node('p', 'counter', `${state.progress} von ${state.total} Aufgaben erledigt`));
     if (state.started) this.root.append(node('p', 'panel', 'Richard hat begonnen. Aufgaben und Starttermin bleiben jetzt fest. Hier kannst du seine Nachweise prüfen.'));
+    if (!state.steps.length && state.settings.published) this.root.append(node('p', 'panel', `Der Start ist für ${formatDate(state.settings.starts_at, true)} Uhr deutscher Zeit geplant. Lege vor dem Start die erste Aufgabe an.`));
     const settings = details(this.root, 'Starttermin und Geschenk-Finale'); settings.open = !state.settings.published;
     const form = node('form', 'panel'); settings.append(form); const fields = node('fieldset'); fields.disabled = state.started; form.append(fields);
     const start = textField(fields, 'Starttermin (Ortszeit deines Geräts)', 'start', { type: 'datetime-local', value: localInput(state.settings.starts_at) });
@@ -275,13 +297,13 @@ class Mystery extends Panel {
     const final = textField(fields, 'Nachricht nach der letzten Aufgabe: Wo ist das große Geschenk?', 'final', { rows: 4, max: 4000, value: state.settings.final_message });
     const label = node('label', 'check-label'); const published = node('input'); published.type = 'checkbox'; published.checked = state.settings.published;
     label.append(published, node('span', '', 'Schnitzeljagd zum eingetragenen Termin freigeben')); fields.append(label);
-    fields.append(node('p', 'field-hint', 'Lege zuerst alle Aufgaben an. Ohne Freigabe bleibt die Schnitzeljagd für Richard verborgen.'));
+    fields.append(node('p', 'field-hint', 'Richard sieht bis zum Start nur das Startbild mit Countdown. Lege vor dem Start deine Aufgaben an. Wenn du die Freigabe ausschaltest, bleiben die Aufgaben verborgen.'));
     const saveSettings = submit(fields, 'Einstellungen speichern');
     form.onsubmit = e => { e.preventDefault(); void this.run(saveSettings, async () => {
       await this.write('hunt_save', { starts_at: start.value ? new Date(start.value).toISOString() : null, published: published.checked, final_message: final.value });
       await this.load(); this.message('Einstellungen gespeichert.');
     }); };
-    const editor = details(this.root, '＋ Aufgabe anlegen oder bearbeiten');
+    const editor = details(this.root, '＋ Aufgabe anlegen oder bearbeiten'); editor.open = !state.steps.length;
     const edit = node('form', 'panel'); const editFields = node('fieldset'); editFields.disabled = state.started; edit.append(editFields); editor.append(edit);
     let editId = crypto.randomUUID();
     const position = textField(editFields, 'Reihenfolge (freie Nummer von 1 bis 100)', 'position', { type: 'number', value: String(Math.max(0, ...state.steps.map(x => x.position)) + 1), required: true }); position.min = '1'; position.max = '100';
@@ -324,18 +346,42 @@ class Mystery extends Panel {
     }
     this.images(jobs);
   }
+  teaser(state) {
+    const card = node('div', 'mystery-teaser');
+    const image = node('img', 'mystery-teaser-image'); image.src = new URL('./mystery-surprise.jpg', import.meta.url).href;
+    image.alt = ''; image.width = 857; image.height = 1536; image.decoding = 'async';
+    const countdown = node('div', 'mystery-countdown'); countdown.setAttribute('role', 'timer'); countdown.setAttribute('aria-live', 'off');
+    const values = ['Tage', 'Std', 'Min', 'Sek'].map(label => {
+      const cell = node('div', 'mystery-countdown-cell'); const value = node('strong', '', '--');
+      cell.append(value, node('span', '', label)); countdown.append(cell); return value;
+    });
+    card.append(image, countdown); this.root.append(card);
+    // Der Server entscheidet über die Freigabe; die Geräteuhr steuert sie nicht.
+    const received = performance.now();
+    const serverNow = Date.parse(state.server_now);
+    const target = Date.parse(state.starts_at || '2026-12-19T00:00:00+01:00');
+    let previous = null;
+    let nextCheck = received + (target <= serverNow ? 30000 : 60000);
+    const tick = () => {
+      const now = performance.now();
+      const seconds = Math.max(0, Math.ceil((target - serverNow - (now - received)) / 1000));
+      if (Number.isFinite(seconds)) {
+        const parts = [Math.floor(seconds / 86400), Math.floor(seconds / 3600) % 24, Math.floor(seconds / 60) % 60, seconds % 60];
+        values.forEach((value, i) => { value.textContent = String(parts[i]).padStart(2, '0'); });
+        countdown.setAttribute('aria-label', `${parts[0]} Tage, ${parts[1]} Stunden, ${parts[2]} Minuten, ${parts[3]} Sekunden`);
+        if (previous > 0 && seconds === 0) nextCheck = 0;
+        previous = seconds;
+      }
+      // Auch ohne erste Aufgabe bleibt der Countdown bei null stehen. Kein Anfrage-Dauerloop.
+      if (this.active && !this.busy && !document.hidden && now >= nextCheck) {
+        nextCheck = now + (seconds === 0 ? 30000 : 60000);
+        void this.run(null, () => this.load());
+      }
+    };
+    this.timer = setInterval(tick, 1000); tick();
+  }
   play(state) {
-    if (state.locked) {
-      const card = node('div', 'panel empty'); card.append(node('span', 'big-icon', '🎁'), node('h2', '', 'Eine Überraschung wartet.')); this.root.append(card);
-      if (!state.starts_at) { card.append(node('p', '', 'Der Starttermin wird noch festgelegt.')); return; }
-      card.append(node('p', '', `Start: ${formatDate(state.starts_at)} Uhr (deine Ortszeit)`));
-      const countdown = node('p', 'countdown'); card.append(countdown); const received = Date.now(); const serverNow = new Date(state.server_now).getTime();
-      const tick = () => {
-        const seconds = Math.max(0, Math.ceil((new Date(state.starts_at).getTime() - (serverNow + Date.now() - received)) / 1000));
-        countdown.textContent = `${Math.floor(seconds / 86400)} Tage · ${Math.floor(seconds / 3600) % 24} Std · ${Math.floor(seconds / 60) % 60} Min · ${seconds % 60} Sek`;
-        if (seconds === 0) { clearInterval(this.timer); void this.run(null, () => this.load()); }
-      }; this.timer = setInterval(tick, 1000); tick(); return;
-    }
+    if (state.locked || (!state.step && !state.finished)) { this.teaser(state); return; }
     this.root.append(node('p', 'counter', `${state.progress} von ${state.total} Aufgaben geschafft`));
     if (state.finished) { const card = node('div', 'panel'); card.append(node('h2', '', 'Geschafft! 🎉'), node('p', 'pre-line', state.final_message || 'Du hast alle Aufgaben gelöst. Frag Kira nach deinem großen Geschenk.')); this.root.append(card); return; }
     if (!state.step) { this.root.append(node('p', '', 'Es ist noch keine Aufgabe verfügbar.')); return; }
@@ -375,8 +421,8 @@ export class Features {
   reset() { this.current = null; Object.values(this.panels).forEach(p => p.reset()); }
   route(name) {
     if (name === this.current) return;
-    if (this.panels[this.current]) clearInterval(this.panels[this.current].timer);
+    if (this.panels[this.current]) { clearInterval(this.panels[this.current].timer); this.panels[this.current].deactivate?.(); }
     this.current = name; const panel = this.panels[name];
-    if (panel) { panel.frame(); panel.message('Wird geladen …'); void panel.run(null, () => panel.load()); }
+    if (panel) { panel.activate?.(); panel.frame(); panel.message('Wird geladen …'); void panel.run(null, () => panel.load()); }
   }
 }

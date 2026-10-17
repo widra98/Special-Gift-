@@ -9,11 +9,11 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <title>Für uns · Richards App</title>
-  <link rel="stylesheet" href="./styles.css?v=20261006">
+  <link rel="stylesheet" href="./styles.css?v=20261016-moods">
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="./icons/icon-192.png">
-  <script type="module" src="./app.js?v=20261006"></script>
+  <script type="module" src="./app.js?v=20261016-moods"></script>
 </head>
 <body>
   <header>
@@ -43,16 +43,22 @@
       <section id="view-menu" class="view" hidden>
         <span class="eyebrow">Nur für uns</span><h1 id="greeting">Hallo!</h1>
         <p class="intro">Kleine Überraschungen. Neue Fragen. Unsere Momente.</p>
+        <a id="moodHome" class="mood-home" href="#moods" aria-label="So geht’s mir: Stimmung ansehen und dein Gefühl wählen"></a>
         <div class="menu-grid">
           <a class="menu-card notes-card" href="#notes"><span class="menu-icon" aria-hidden="true">💌</span><span><strong>Unsere täglichen Notizen</strong><span>Ein Gedanke, ein Bild, ein kleiner Gruß.</span></span><span class="arrow" aria-hidden="true">›</span></a>
           <a class="menu-card" href="#quiz"><span class="menu-icon" aria-hidden="true">❓</span><span><strong>Beziehungs-Quiz</strong><span id="quizSummary">Deine neuen Fragen warten hier.</span></span><span class="arrow" aria-hidden="true">›</span></a>
           <a class="menu-card" href="#match"><span class="menu-icon" aria-hidden="true">💞</span><span><strong>Sind wir uns einig?</strong><span>Gleiche Fragen. Erst antworten, dann vergleichen.</span></span><span class="arrow" aria-hidden="true">›</span></a>
           <a class="menu-card" href="#create"><span class="menu-icon" aria-hidden="true">✍️</span><span><strong id="createTitle">Eine Frage erstellen</strong><span>Vier Antworten. Eine richtige Lösung.</span></span><span class="arrow" aria-hidden="true">›</span></a>
           <a class="menu-card" href="#wishes"><span class="menu-icon" aria-hidden="true">🎬</span><span><strong>Glückwünsche</strong><span>Ein ganz persönliches Video für dich</span></span><span class="arrow" aria-hidden="true">›</span></a>
-          <a class="menu-card" href="#mystery"><span class="menu-icon" aria-hidden="true">🎁</span><span><strong>Mystery Surprise</strong><span>Eine Schnitzeljagd. Ein großes Geschenk.</span></span><span class="arrow" aria-hidden="true">›</span></a>
+          <a class="menu-card" href="#mystery"><span class="menu-icon" aria-hidden="true">🎁</span><span><strong>Mystery Surprise</strong></span><span class="arrow" aria-hidden="true">›</span></a>
           <a class="menu-card" href="#gallery"><span class="menu-icon" aria-hidden="true">📸</span><span><strong>Unsere Erinnerungen</strong><span>Fotoalben & schöne Momente</span></span><span class="arrow" aria-hidden="true">›</span></a>
           <a class="menu-card" href="#rewards"><span class="menu-icon" aria-hidden="true">🎟️</span><span><strong>Prämien-Shop</strong><span>Eure Punkte werden zu gemeinsamen Erlebnissen.</span></span><span class="arrow" aria-hidden="true">›</span></a>
         </div>
+      </section>
+      <section id="view-moods" class="view" hidden>
+        <a class="btn-back" href="#menu">‹ Zurück zum Menü</a><h1>So geht’s mir</h1>
+        <p class="intro">Eine kleine Katze zeigt, wie es euch gerade geht.</p>
+        <div id="moodPanel"></div>
       </section>
       <section id="view-notes" class="view" hidden>
         <a class="btn-back" href="#menu">‹ Zurück zum Menü</a><h1>Ein kleiner Gruß für dich.</h1>
