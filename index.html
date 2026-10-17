@@ -9,11 +9,11 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <title>Für uns · Richards App</title>
-  <link rel="stylesheet" href="./styles.css?v=20261016-moods">
+  <link rel="stylesheet" href="./styles.css?v=20261016-together">
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="./icons/icon-192.png">
-  <script type="module" src="./app.js?v=20261016-moods"></script>
+  <script type="module" src="./app.js?v=20261017-albums"></script>
 </head>
 <body>
   <header>
@@ -40,11 +40,15 @@
       </form>
     </section>
     <div id="authenticated" hidden>
+      <aside id="careAlert" class="care-alert" role="alert" hidden></aside>
+      <a class="care-shortcut" href="#care">♡ Ich brauche dich</a>
       <section id="view-menu" class="view" hidden>
         <span class="eyebrow">Nur für uns</span><h1 id="greeting">Hallo!</h1>
         <p class="intro">Kleine Überraschungen. Neue Fragen. Unsere Momente.</p>
         <a id="moodHome" class="mood-home" href="#moods" aria-label="So geht’s mir: Stimmung ansehen und dein Gefühl wählen"></a>
+        <a id="mantraHome" class="mantra-home" href="#mantra"></a>
         <div class="menu-grid">
+          <a class="menu-card" href="#journal"><span class="menu-icon" aria-hidden="true">📖</span><span><strong>Unser Gefühlslogbuch</strong><span>Eure Gefühle und Mantras zum Wiederansehen.</span></span><span class="arrow" aria-hidden="true">›</span></a>
           <a class="menu-card notes-card" href="#notes"><span class="menu-icon" aria-hidden="true">💌</span><span><strong>Unsere täglichen Notizen</strong><span>Ein Gedanke, ein Bild, ein kleiner Gruß.</span></span><span class="arrow" aria-hidden="true">›</span></a>
           <a class="menu-card" href="#quiz"><span class="menu-icon" aria-hidden="true">❓</span><span><strong>Beziehungs-Quiz</strong><span id="quizSummary">Deine neuen Fragen warten hier.</span></span><span class="arrow" aria-hidden="true">›</span></a>
           <a class="menu-card" href="#match"><span class="menu-icon" aria-hidden="true">💞</span><span><strong>Sind wir uns einig?</strong><span>Gleiche Fragen. Erst antworten, dann vergleichen.</span></span><span class="arrow" aria-hidden="true">›</span></a>
@@ -55,10 +59,28 @@
           <a class="menu-card" href="#rewards"><span class="menu-icon" aria-hidden="true">🎟️</span><span><strong>Prämien-Shop</strong><span>Eure Punkte werden zu gemeinsamen Erlebnissen.</span></span><span class="arrow" aria-hidden="true">›</span></a>
         </div>
       </section>
+      <section id="view-journal" class="view" hidden>
+        <a class="btn-back" href="#menu">‹ Zurück zum Menü</a><h1>Unser Gefühlslogbuch</h1>
+        <p class="intro">Wie es euch ging und was ihr einander mitgegeben habt. Auch Änderungen im Laufe eines Tages bleiben erhalten.</p>
+        <div id="journalPanel"></div>
+      </section>
+      <section id="view-mantra" class="view" hidden>
+        <a class="btn-back" href="#menu">‹ Zurück zum Menü</a><h1>Ein Mantra für dich</h1>
+        <p class="intro">Ein kleiner Satz, der durch den Tag begleitet. Ihr könnt beide jeden Tag ein Mantra schicken. Ein neuer Tag beginnt um Mitternacht deutscher Zeit.</p>
+        <div id="mantraPanel"></div>
+        <a class="btn-back" href="#journal">Alle Mantras im Logbuch ansehen ›</a>
+      </section>
+      <section id="view-care" class="view" hidden>
+        <a class="btn-back" href="#menu">‹ Zurück zum Menü</a><h1>Ich brauche dich</h1>
+        <p class="intro">Wenn gerade alles zu viel ist, kannst du hier ein Zeichen geben.</p>
+        <div id="carePanel"></div>
+        <p class="field-hint">Dieses Signal ist ein Wunsch nach Kontakt. Zustellung und Ton sind nicht garantiert. Wenn du sofort Unterstützung brauchst, ruf bitte zusätzlich direkt an.</p>
+      </section>
       <section id="view-moods" class="view" hidden>
         <a class="btn-back" href="#menu">‹ Zurück zum Menü</a><h1>So geht’s mir</h1>
         <p class="intro">Eine kleine Katze zeigt, wie es euch gerade geht.</p>
         <div id="moodPanel"></div>
+        <a class="btn-back" href="#journal">Eure Gefühle im Logbuch ansehen ›</a>
       </section>
       <section id="view-notes" class="view" hidden>
         <a class="btn-back" href="#menu">‹ Zurück zum Menü</a><h1>Ein kleiner Gruß für dich.</h1>

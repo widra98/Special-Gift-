@@ -113,20 +113,60 @@ class Panel {
 }
 
 class Gallery extends Panel {
-  reset() { super.reset(); this.albumId = null; this.offset = 0; this.queue = null; }
+  reset() { super.reset(); this.albumId = null; this.offset = 0; this.queue = null; this.order = 'newest'; }
+  async call(action, data = {}) {
+    if (!['albums_list', 'album_create', 'album_rename'].includes(action)) return super.call(action, data);
+    const ticket = this.epoch; this.guard(ticket);
+    try {
+      const result = action === 'albums_list'
+        ? await this.api.rpc('rq_album_list', { p_order: this.order, p_offset: data.offset ?? 0 })
+        : await this.api.rpc('rq_album_save', { p_action: action, p_data: data });
+      this.guard(ticket); return result;
+    } catch (error) {
+      this.guard(ticket);
+      if (error.status === 404) error.message = 'Bitte zuerst die drei SQL-Schritte für die Album-Sortierung aus dem aktuellen Update ausführen.';
+      throw error;
+    }
+  }
+  dateField(form, value = '') {
+    const input = textField(form, 'Datum des Erlebnisses (optional)', 'event_date', { type: 'date', value: value ?? '' });
+    input.min = '0001-01-01'; input.max = '9999-12-31';
+    form.append(node('p', 'field-hint', 'Bei einer Reise kannst du den ersten Tag nehmen. Das Datum lässt sich später ändern.'));
+    return input;
+  }
+  dateLabel(value) { return value ? value.split('-').reverse().join('.') : 'Datum noch offen'; }
   async load() {
     const result = this.albumId ? await this.call('album_get', { id: this.albumId, offset: this.offset }) : await this.call('albums_list', { offset: this.offset });
     this.frame(); this.queue = null;
     if (this.albumId) this.album(result); else this.list(result);
   }
   list(items) {
+    const ordering = node('div', 'panel');
+    const label = node('label', '', 'Alben sortieren'); label.htmlFor = 'albumOrder';
+    const select = node('select'); select.id = 'albumOrder';
+    for (const [value, title] of [['newest', 'Neueste Erlebnisse zuerst'], ['oldest', 'Älteste Erlebnisse zuerst']]) {
+      const option = node('option', '', title); option.value = value; select.append(option);
+    }
+    select.value = this.order;
+    select.onchange = () => {
+      const order = select.value, previous = this.order, previousOffset = this.offset;
+      if (this.busy) { select.value = previous; return; }
+      void this.run(select, async () => {
+        this.order = order; this.offset = 0;
+        try { await this.load(); }
+        catch (error) { this.order = previous; this.offset = previousOffset; select.value = previous; throw error; }
+      });
+    };
+    ordering.append(label, select, node('p', 'field-hint', 'Sortiert nach dem Datum des Erlebnisses. Alben ohne Datum stehen am Ende.'));
+    this.root.append(ordering);
     const create = details(this.root, '＋ Neues Album anlegen');
     const form = node('form', 'panel'); create.append(form);
     const title = textField(form, 'Albumname', 'title', { required: true, max: 100 });
     const description = textField(form, 'Beschreibung (optional)', 'description', { rows: 2, max: 1000 });
+    const date = this.dateField(form);
     const send = submit(form, 'Album erstellen'); const id = crypto.randomUUID();
     form.onsubmit = e => { e.preventDefault(); void this.run(send, async () => {
-      const result = await this.write('album_create', { id, title: title.value.trim(), description: description.value.trim() });
+      const result = await this.write('album_create', { id, title: title.value.trim(), description: description.value.trim(), event_date: date.value || null });
       this.albumId = result.id; this.offset = 0; await this.load(); this.message('Album angelegt. Jetzt kannst du Fotos hinzufügen.');
     }); };
     if (!items.length) this.root.append(node('p', 'panel empty', 'Noch keine Alben. Legt euer erstes gemeinsames Album an.'));
@@ -134,6 +174,7 @@ class Gallery extends Panel {
     for (const item of items.slice(0, 20)) {
       const card = button('', b => this.run(b, async () => { this.albumId = item.id; this.offset = 0; await this.load(); }), 'album-card');
       const cover = node('div', 'album-cover', '📸'); card.append(cover, node('strong', '', item.title), node('span', '', `${item.count} Fotos`));
+      card.append(node('span', 'album-date', this.dateLabel(item.event_date)));
       if (item.description) card.append(node('p', '', item.description)); grid.append(card);
       if (item.cover) jobs.push(() => this.image(item.cover, 'rq-albums', cover, `Titelbild: ${item.title}`));
     }
@@ -148,13 +189,15 @@ class Gallery extends Panel {
   album(data) {
     const a = data.album;
     this.root.append(button('‹ Alle Alben', b => this.run(b, async () => { this.albumId = null; this.offset = 0; await this.load(); }), 'text-btn'));
-    this.root.append(node('h2', '', a.title), node('p', '', a.description));
-    const edit = details(this.root, 'Albumname und Beschreibung bearbeiten'); const rename = node('form', 'panel'); edit.append(rename);
+    this.root.append(node('h2', '', a.title), node('p', 'album-date', this.dateLabel(a.event_date)), node('p', '', a.description));
+    const edit = details(this.root, 'Album bearbeiten'); const rename = node('form', 'panel'); edit.append(rename);
     const title = textField(rename, 'Albumname', 'title', { value: a.title, max: 100, required: true });
     const description = textField(rename, 'Beschreibung', 'description', { value: a.description, rows: 2, max: 1000 });
+    const date = this.dateField(rename, a.event_date);
     const renameButton = submit(rename, 'Änderungen speichern');
     rename.onsubmit = e => { e.preventDefault(); void this.run(renameButton, async () => {
-      await this.write('album_rename', { id: a.id, title: title.value.trim(), description: description.value.trim() }); await this.load();
+      await this.write('album_rename', { id: a.id, title: title.value.trim(), description: description.value.trim(), event_date: date.value || null }); await this.load();
+      this.message('Album gespeichert. Es wird nach dem Datum des Erlebnisses einsortiert.');
     }); };
     const form = node('form', 'panel');
     const files = textField(form, 'Fotos vom Handy auswählen', 'photos', { type: 'file', required: true });

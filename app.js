@@ -1,5 +1,6 @@
-import { Features } from './features.js?v=20261016';
+import { Features } from './features.js?v=20261017-albums';
 import { MoodsPanel } from './moods.js?v=20261016-moods';
+import { TogetherPanel } from './together.js?v=20261016-together';
 import { config } from './config.js';
 import { QuizApi } from './api.js?v=20261006';
 import { AnswerSubmission, validateQuestion } from './quiz-state.js?v=20261006';
@@ -9,6 +10,7 @@ const api = new QuizApi(config);
 const notes = new NotesPanel(api, config.supabaseUrl);
 const features = new Features(api, config.supabaseUrl, () => refresh().catch(displayError));
 const moods = new MoodsPanel(api, config.supabaseUrl, displayError);
+const together = new TogetherPanel(api, config.supabaseUrl, displayError);
 const $ = id => document.getElementById(id);
 const el = (tag, className, text) => {
   const node = document.createElement(tag);
@@ -16,7 +18,7 @@ const el = (tag, className, text) => {
   if (text !== undefined) node.textContent = text;
   return node;
 };
-const views = ['menu', 'quiz', 'create', 'notes', 'wishes', 'mystery', 'gallery', 'rewards', 'match', 'moods'];
+const views = ['menu', 'quiz', 'create', 'notes', 'wishes', 'mystery', 'gallery', 'rewards', 'match', 'moods', 'journal', 'mantra', 'care'];
 let rewards = [];
 let state = null;
 let answer = null;
@@ -43,10 +45,11 @@ function currentView() { const name = location.hash.slice(1); return views.inclu
 function showRoute(scroll = false) {
   for (const name of views) $(`view-${name}`).hidden = name !== currentView();
   if(state)moods.route(currentView());
+  if(state)together.route(currentView());
   if (scroll) window.scrollTo(0, 0);
 }
 function showLogin() {
-  notes.reset(); features.reset(); moods.reset();
+  notes.reset(); features.reset(); moods.reset(); together.reset();
   state = null; answer = null; shownQuestion = null; draft = null; pendingReward = null; restoredFor = null;
   creating = false; redeeming = false;
   $('authenticated').hidden = true;
@@ -92,6 +95,7 @@ async function refresh({ resetQuiz = false } = {}) {
     state = nextState; rewards = state.rewards; features.attach(state.me);
     notes.attach(state.me);
     moods.attach(state.me, state.partner);
+    together.attach(state.me, state.partner);
     $('loginView').hidden = true;
     $('authenticated').hidden = false;
     $('pointsBadge').hidden = false;
@@ -279,8 +283,10 @@ $('loginForm').onsubmit = async event => {
     status('loginStatus', error.status === 400 ? 'E-Mail-Adresse oder Passwort stimmen nicht.' : error.message, 'error');
   } finally { $('loginButton').disabled = false; }
 };
-$('logout').onclick = () => {
-  epoch++; void api.logout(); showLogin(); status('globalStatus');
+$('logout').onclick = async () => {
+  $('logout').disabled=true;
+  try { await together.beforeLogout(); epoch++; void api.logout(); showLogin(); status('globalStatus'); }
+  finally { $('logout').disabled=false; }
 };
 window.addEventListener('hashchange', () => { showRoute(true); if (state) refresh().catch(displayError); });
 document.addEventListener('visibilitychange', () => { if (!document.hidden && state) refresh().catch(displayError); });
